@@ -1,7 +1,5 @@
 #include <PID_v1.h>
-
 #include <Arduino.h>
-
 
 #define MOTOR_LEFT 0
 #define MOTOR_RIGHT 1
@@ -14,6 +12,8 @@ const int brocheThro = 8;
 const int brocheAile = 9;
 const int brocheINT4 = 18;
 const int brocheINT5 = 19;
+
+const int kTics = 56;
 
 volatile int encoderR = 0;
 volatile int encoderL = 0;
@@ -55,6 +55,15 @@ void repeat(void) {
   static int sensMoteurR = AVANT;
   static int direction = 0;
 
+  static unsigned long timeMillis;
+  static unsigned long previousTimeMillis;
+
+  static int dxR = 0;
+  static int dxL = 0;
+  static int previousXR = 0;
+  static int previousXL = 0;
+  static int vL;
+  static int vR;
   //throVal = getAverage(pulseIn(brocheThro, HIGH, 25000));
   throVal = pulseIn(brocheThro, HIGH, 25000);
   aileVal = pulseIn(brocheAile, HIGH, 25000);
@@ -62,6 +71,11 @@ void repeat(void) {
     puissanceMoteurs = map(throVal, 1087, 1880, -50, 50);
     direction = map(aileVal, 1110, 1865, -20, 20);
   */
+  timeMillis = millis();
+  int dt = timeMillis - previousTimeMillis;  dxL = encoderL - previousXL;
+  previousXL = encoderL;
+  vL = (unsigned long) kTics * dxL / dt;
+
   Input = 30;
   Setpoint = 20;
   myPID.Compute();
