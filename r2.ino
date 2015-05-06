@@ -39,8 +39,8 @@ void setup()  {
   attachInterrupt(4, intEncoderL, CHANGE); //PIN 19
   attachInterrupt(5, intEncoderR, CHANGE); //PIN 18
 
-  Input = 15;
-  Setpoint = 15;
+  Input = 0;
+  Setpoint = 0;
   myPID.SetMode(AUTOMATIC);
 
 }
@@ -77,7 +77,8 @@ void repeat(void) {
   vL = (unsigned long) kTics * dxL / dt;
 
   Input = 30;
-  Setpoint = 20;
+  //Setpoint = map(throVal, 1087, 1880, -50, 50);
+  Setpoint = 20; //TODO : gérer le sens de rotation
   myPID.Compute();
   traceVal(Setpoint);
   traceVal(Input);
