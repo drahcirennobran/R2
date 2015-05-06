@@ -13,7 +13,7 @@ const int brocheAile = 9;
 const int brocheINT4 = 18;
 const int brocheINT5 = 19;
 
-const int kTics = 56;
+const int kTics = 100;
 
 volatile int encoderR = 0;
 volatile int encoderL = 0;
@@ -74,17 +74,19 @@ void repeat(void) {
   timeMillis = millis();
   int dt = timeMillis - previousTimeMillis;  dxL = encoderL - previousXL;
   previousXL = encoderL;
+  previousTimeMillis = timeMillis;
   vL = (unsigned long) kTics * dxL / dt;
 
-  Input = 30;
+  Input = vL;
   //Setpoint = map(throVal, 1087, 1880, -50, 50);
   Setpoint = 20; //TODO : gérer le sens de rotation
   myPID.Compute();
   traceVal(Setpoint);
   traceVal(Input);
   traceVal(Output);
+  //traceVal(vL);
   Serial.println("");
-  if (iScenar > 20) {
+  if (iScenar > 40) {
     Output = 0;
   }
   setMotorPower(MOTOR_LEFT, sensMoteurL, Output, false);
@@ -113,22 +115,22 @@ void setMotorPower(int motor, int direction, int power, boolean brake) {
 
 void traceVal(float val) {
   Serial.print(val);
-  Serial.print(':');
+  Serial.print('|');
 }
 
 void traceVal(double val) {
   Serial.print(val);
-  Serial.print(':');
+  Serial.print('|');
 }
 
 void traceVal(int val) {
   Serial.print(val);
-  Serial.print(':');
+  Serial.print('|');
 }
 
 void traceVal(unsigned long val) {
   Serial.print(val);
-  Serial.print(':');
+  Serial.print('|');
 }
 
 int getAverage(int val) {
