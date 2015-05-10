@@ -18,8 +18,11 @@ const int kTics = 100;
 volatile int encoderR = 0;
 volatile int encoderL = 0;
 
-double Setpoint, Input, Output;
-PID myPID(&Input, &Output, &Setpoint, 2, 5, 1, DIRECT);
+double leftSpeedTarget, leftInput, leftOutput;
+double rightSpeedTarget, rightInput, rightOutput;
+
+PID pidLeft(&leftInput, &leftOutput, &leftSpeedTarget, 2, 5, 0, DIRECT);
+PID pidRight(&rightInput, &rightOutput, &rightSpeedTarget, 2, 5, 0, DIRECT);
 
 void setup()  {
   Serial.begin(115000);
@@ -39,9 +42,14 @@ void setup()  {
   attachInterrupt(4, intEncoderL, CHANGE); //PIN 19
   attachInterrupt(5, intEncoderR, CHANGE); //PIN 18
 
-  Input = 0;
-  Setpoint = 0;
-  myPID.SetMode(AUTOMATIC);
+  leftInput = 0;
+  rightInput = 0;
+  leftSpeedTarget = 0;
+  rightSpeedTarget = 0;
+  pidLeft.SetMode(AUTOMATIC);
+  pidLeft.SetSampleTime(100);
+  pidRight.SetMode(AUTOMATIC);
+  pidRight.SetSampleTime(100);
 
 }
 
@@ -64,6 +72,8 @@ void repeat(void) {
   static int previousXL = 0;
   static int vL;
   static int vR;
+  static int dt;
+  
   //throVal = getAverage(pulseIn(brocheThro, HIGH, 25000));
   throVal = pulseIn(brocheThro, HIGH, 25000);
   aileVal = pulseIn(brocheAile, HIGH, 25000);
@@ -72,24 +82,36 @@ void repeat(void) {
     direction = map(aileVal, 1110, 1865, -20, 20);
   */
   timeMillis = millis();
-  int dt = timeMillis - previousTimeMillis;  dxL = encoderL - previousXL;
+  dt = timeMillis - previousTimeMillis;
+  dxL = encoderL - previousXL;
+  dxR = encoderR - previousXR;
+
   previousXL = encoderL;
+  previousXR = encoderR;
+
   previousTimeMillis = timeMillis;
   vL = (unsigned long) kTics * dxL / dt;
+  vR = (unsigned long) kTics * dxR / dt;
 
-  Input = vL;
-  //Setpoint = map(throVal, 1087, 1880, -50, 50);
-  Setpoint = 20; //TODO : gérer le sens de rotation
-  myPID.Compute();
-  traceVal(Setpoint);
-  traceVal(Input);
-  traceVal(Output);
+  leftInput = vL;
+  rightInput = vR;
+  //leftSpeedTarget = map(throVal, 1087, 1880, -50, 50);
+  leftSpeedTarget = 40; //TODO : gérer le sens de rotation
+  rightSpeedTarget = 40; //TODO : gérer le sens de rotation
+  pidLeft.Compute();
+  pidRight.Compute();
+/*
+  traceVal(leftSpeedTarget);
+  traceVal(leftInput);
+  traceVal(leftOutput);
   //traceVal(vL);
   Serial.println("");
-  if (iScenar > 40) {
-    Output = 0;
+  */
+  if (iScenar > 20) {
+    leftOutput = 0;
   }
-  setMotorPower(MOTOR_LEFT, sensMoteurL, Output, false);
+  setMotorPower(MOTOR_LEFT, sensMoteurL, leftOutput, false);
+  setMotorPower(MOTOR_RIGHT, sensMoteurR, leftOutput, false);
 
   iScenar++;
 }
