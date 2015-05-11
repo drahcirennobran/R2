@@ -60,7 +60,6 @@ void repeat(void) {
   static int iScenar = 0;
   static int throVal = 0;
   static int aileVal = 0;
-  static int puissanceMoteurs = 0;
   static int sensMoteurL = AVANT;
   static int sensMoteurR = AVANT;
   static int direction = 0;
@@ -94,8 +93,10 @@ void repeat(void) {
   vL = (unsigned long) kTics * dxL / dt;
   vR = (unsigned long) kTics * dxR / dt;
 
-  leftSpeedTarget = map(throVal, 1087, 1880, -100, 100) - direction;
-  rightSpeedTarget = map(throVal, 1087, 1880, -100, 100) + direction;
+  leftSpeedTarget = map(throVal, 1087, 1880, -100, 100) + direction;
+  rightSpeedTarget = map(throVal, 1087, 1880, -100, 100) - direction;
+  traceVal(leftSpeedTarget);
+  traceVal(rightSpeedTarget);
 
   if (leftSpeedTarget < 0) {
     leftSpeedTarget = -leftSpeedTarget;
@@ -111,30 +112,34 @@ void repeat(void) {
     sensMoteurR = AVANT;
   }
 
-  if (leftSpeedTarget < 40 && rightSpeedTarget < 20) {
+  pidLeft.Compute();
+  pidRight.Compute();
+
+  if (leftSpeedTarget < 20 && rightSpeedTarget < 20) {
     leftSpeedTarget = 0;
     rightSpeedTarget = 0;
-    leftInput = vL;
-    rightInput = vR;
+    //leftInput = 0;
+    //rightInput = 0;
+    //leftOutput = 0;
+    //rightOutput = 0;
+    setMotorPower(MOTOR_LEFT, sensMoteurL, 0, false);
+    setMotorPower(MOTOR_RIGHT, sensMoteurR, 0, false);
   } else {
     leftInput = vL;
     rightInput = vR;
+    setMotorPower(MOTOR_LEFT, sensMoteurL, leftOutput, false);
+    setMotorPower(MOTOR_RIGHT, sensMoteurR, rightOutput, false);
   }
 
-  pidLeft.Compute();
-  pidRight.Compute();
+  traceVal(leftOutput);
+  traceVal(rightOutput);
+
+  Serial.println("");
   /*
-    traceVal(leftSpeedTarget);
-    traceVal(leftInput);
-    traceVal(leftOutput);
-    //traceVal(vL);
-    Serial.println("");
-    */
   if (iScenar > 20) {
-    leftOutput = 0;
-  }
-  setMotorPower(MOTOR_LEFT, sensMoteurL, leftOutput, false);
-  setMotorPower(MOTOR_RIGHT, sensMoteurR, leftOutput, false);
+      leftOutput = 0;
+    }
+    */
 
   lcd.print(String(encoderL) + encoderL + " | " + encoderR);
   iScenar++;
