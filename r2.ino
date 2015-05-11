@@ -1,5 +1,7 @@
 #include <PID_v1.h>
 #include <Arduino.h>
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
 
 #define MOTOR_LEFT 0
 #define MOTOR_RIGHT 1
@@ -18,11 +20,13 @@ const int kTics = 100;
 volatile int encoderR = 0;
 volatile int encoderL = 0;
 
-double leftSpeedTarget, leftInput, leftOutput;
-double rightSpeedTarget, rightInput, rightOutput;
+double leftSpeedTarget = 0, leftInput = 0, leftOutput;
+double rightSpeedTarget = 0, rightInput = 0, rightOutput;
 
 PID pidLeft(&leftInput, &leftOutput, &leftSpeedTarget, 2, 5, 0, DIRECT);
 PID pidRight(&rightInput, &rightOutput, &rightSpeedTarget, 2, 5, 0, DIRECT);
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 void setup()  {
   Serial.begin(115000);
@@ -42,15 +46,13 @@ void setup()  {
   attachInterrupt(4, intEncoderL, CHANGE); //PIN 19
   attachInterrupt(5, intEncoderR, CHANGE); //PIN 18
 
-  leftInput = 0;
-  rightInput = 0;
-  leftSpeedTarget = 0;
-  rightSpeedTarget = 0;
   pidLeft.SetMode(AUTOMATIC);
   pidLeft.SetSampleTime(100);
   pidRight.SetMode(AUTOMATIC);
   pidRight.SetSampleTime(100);
 
+  lcd.init();
+  lcd.backlight();
 }
 
 void repeat(void) {
@@ -73,14 +75,13 @@ void repeat(void) {
   static int vL;
   static int vR;
   static int dt;
-  
+
   //throVal = getAverage(pulseIn(brocheThro, HIGH, 25000));
   throVal = pulseIn(brocheThro, HIGH, 25000);
   aileVal = pulseIn(brocheAile, HIGH, 25000);
-  /*
-    puissanceMoteurs = map(throVal, 1087, 1880, -50, 50);
-    direction = map(aileVal, 1110, 1865, -20, 20);
-  */
+
+  direction = map(aileVal, 1110, 1865, -40, 40);
+
   timeMillis = millis();
   dt = timeMillis - previousTimeMillis;
   dxL = encoderL - previousXL;
@@ -93,26 +94,49 @@ void repeat(void) {
   vL = (unsigned long) kTics * dxL / dt;
   vR = (unsigned long) kTics * dxR / dt;
 
-  leftInput = vL;
-  rightInput = vR;
-  //leftSpeedTarget = map(throVal, 1087, 1880, -50, 50);
-  leftSpeedTarget = 40; //TODO : gérer le sens de rotation
-  rightSpeedTarget = 40; //TODO : gérer le sens de rotation
+  leftSpeedTarget = map(throVal, 1087, 1880, -100, 100) - direction;
+  rightSpeedTarget = map(throVal, 1087, 1880, -100, 100) + direction;
+
+  if (leftSpeedTarget < 0) {
+    leftSpeedTarget = -leftSpeedTarget;
+    sensMoteurL = ARRIERE;
+  } else {
+    sensMoteurL = AVANT;
+  }
+
+  if (rightSpeedTarget < 0) {
+    rightSpeedTarget = -rightSpeedTarget;
+    sensMoteurR = ARRIERE;
+  } else {
+    sensMoteurR = AVANT;
+  }
+
+  if (leftSpeedTarget < 40 && rightSpeedTarget < 20) {
+    leftSpeedTarget = 0;
+    rightSpeedTarget = 0;
+    leftInput = vL;
+    rightInput = vR;
+  } else {
+    leftInput = vL;
+    rightInput = vR;
+  }
+
   pidLeft.Compute();
   pidRight.Compute();
-/*
-  traceVal(leftSpeedTarget);
-  traceVal(leftInput);
-  traceVal(leftOutput);
-  //traceVal(vL);
-  Serial.println("");
-  */
+  /*
+    traceVal(leftSpeedTarget);
+    traceVal(leftInput);
+    traceVal(leftOutput);
+    //traceVal(vL);
+    Serial.println("");
+    */
   if (iScenar > 20) {
     leftOutput = 0;
   }
   setMotorPower(MOTOR_LEFT, sensMoteurL, leftOutput, false);
   setMotorPower(MOTOR_RIGHT, sensMoteurR, leftOutput, false);
 
+  lcd.print(String(encoderL) + encoderL + " | " + encoderR);
   iScenar++;
 }
 
